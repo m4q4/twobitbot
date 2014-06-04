@@ -30,10 +30,17 @@ else:
 #
 # factory.doStop()/.doStart maybe?
 
+# todo clean shutdowns once again
+
 # TODO: refactor to make passing around exchanges and configuration easier/better.
 # TODO: Services
 # TODO: rethink logging
 # TODO: replace bitstampwatcher
+
+# todo type/rtype for all methods/functions in all 3 projects
+# see https://www.jetbrains.com/pycharm/webhelp/type-hinting-in-pycharm.html
+
+# todo support for invite-only channels, maybe password-protected as well.
 #####################
 
 log = logging.getLogger("ircbot")

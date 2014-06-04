@@ -134,8 +134,9 @@ class Flair(object):
 
             data = FlairRow(*last)
             defer.returnValue(data)
-        else:
-            raise ValueError
+        # todo had to disable this because it's unhandled
+        # else:
+        #     raise ValueError
 
     @defer.inlineCallbacks
     def top(self):
@@ -161,7 +162,7 @@ class Flair(object):
                 else:
                     normalized_users.append((row[0], row[1], row[2]/100))
             top = sorted(normalized_users, key=lambda usr: usr[2], reverse=True)
-            top_strs = ["%s (%s with $%.2f)" % (user[0], user[1], user[2]) for user in top[:3]]
+            top_strs = ["%s (%s with $%.2f)" % (user[0], user[1], user[2]) for user in top[:5]]
             defer.returnValue("Top flair users: " + ', '.join(top_strs))
 
     @defer.inlineCallbacks

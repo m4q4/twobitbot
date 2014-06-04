@@ -100,6 +100,7 @@ Other Todo
 * add wall tracking
 * add better live_orders support and Bitstamp HTTP API
 * rethink logging
+* change alert default from 0 aka disabled? Add flair_db and throttle time settings again?
 
 
 Changelog
