@@ -7,7 +7,7 @@ import copy
 from collections import deque
 
 from twobitbot import utils
-import bitcoinapis
+import exchangelib
 
 log = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ log = logging.getLogger(__name__)
 
 
 # temp class for integrating bitstampobserver
-class BitstampAlerter(bitcoinapis.BitstampObserver):
+class BitstampAlerter(exchangelib.BitstampObserver):
     def __init__(self, triggervolume=100):
         super(BitstampAlerter, self).__init__()
         self.triggervolume = triggervolume
-        self.obs = bitcoinapis.BitstampObserver()
+        self.obs = exchangelib.BitstampObserver()
         self.alert_callbacks = list()
 
     def add_alerter(self, callback):
@@ -69,9 +69,10 @@ class BitstampWatcher(object):
 
         self.alert_cbs = list()
 
-        self.api = bitcoinapis.BitstampWSAPI()
-        self.api.add_trade_listener(self.on_trade)
-        self.api.add_orderbook_listener(self.on_orderbook)
+        # was previously done with BitstampWSAPI and add_trade_listener/add_orderbook_listener
+        self.api = exchangelib.BitstampWebsocketAPI2()
+        self.api.listen('trade', self.on_trade)
+        self.api.listen('orderbook', self.on_orderbook)
         #self.api.add_liveorder_listener('')
 
         self.checker = task.LoopingCall(self.check_whale_marketorder)
@@ -144,7 +145,7 @@ class BitstampWatcher(object):
         # Not sure if this is the best method to do so.
         # May not be necessary now that I removed the recentorders.clear() call in there
         self._clear_old_trades()
-        orders = copy.deepcopy(self.recentorders)
+        orders = copy.copy(self.recentorders)
 
         ordersum = sum([order['amount'] for order in orders])
 
