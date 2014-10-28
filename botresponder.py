@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from twisted.internet import defer
+from twisted.internet import defer, threads
 #from twisted.application import service
 
 import logging
@@ -22,6 +22,13 @@ class BotResponder(object):
         except KeyError:
             self.name = None
         self.flair = flair.Flair(self.exchange_watcher, flair_db=self.config['flair_db'])
+
+        if self.config['wolfram_alpha_api_key']:
+            import wolframalpha
+            self.wolframalpha = wolframalpha.Client(self.config['wolfram_alpha_api_key'])
+        else:
+            self.wolframalpha = False
+            """:type: wolframalpha.Client"""
 
     def set_name(self, nickname):
         self.name = nickname
@@ -79,6 +86,29 @@ class BotResponder(object):
                                utils.format_time(localized['time'])))
         else:
             defer.returnValue("Invalid location.")
+
+    @defer.inlineCallbacks
+    def cmd_math(self, user, *msg):
+        # todo:
+        # - fucks up unicode (try "!math price of 1 bitcoin")
+        # - messes up multi line output (try "!math licks to get to the center of a tootsie pop")
+        # - unicode encoding error (try "!math size of new york city in square feet")
+        # - works on website but not API (try "!math price of gas in portland oregon")
+        if not self.wolframalpha:
+            # todo return silently instead?
+            defer.returnValue("Sorry, this command is not available because no Wolfram Alpha API key is set.")
+        else:
+            user_query = ' '.join(msg)
+            log.info("Querying Wolfram Alpha with '{}' for '{}'".format(user_query, user))
+            response = yield threads.deferToThread(self.wolframalpha.query, user_query)
+
+            answer = next(response.results, '')
+            answer = answer.text.strip() if answer else "I don't know what you mean."
+            # todo replace this unicode literal with unicode_literal future import
+            defer.returnValue(u"{}: {}".format(user, answer))
+
+    def cmd_wolfram(self, user, *msg):
+        return self.cmd_math(user, *msg)
 
     def cmd_flair(self, user, *msg):
         if len(msg) == 0:
