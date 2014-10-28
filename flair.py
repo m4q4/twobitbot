@@ -30,11 +30,16 @@ class Flair(object):
     btcpip = Decimal(10000)
     usdpip = Decimal(100)
 
-    def __init__(self, exchange_watcher, flair_db, ratelimiter=None):
+    def __init__(self, exchange_watcher, db, change_delay=0):
+        """
+        db: flair sqlite3 database location
+        change_delay: how long users must wait between flair changes
+        top_list_size: how many entries to return with the `!flair top` command
+        """
         # todo implement better method of doing stuff than passing an exchange_watcher
         self.watcher = exchange_watcher
-        self.ratelimiter = ratelimiter or ratelimit.ConstantRateLimiter(delay=3*60)
-        self.db_location = flair_db
+        self.ratelimiter = ratelimit.ConstantRateLimiter(delay=change_delay)
+        self.db_location = db
 
         self.dbpool = None
         self.start()
@@ -139,7 +144,7 @@ class Flair(object):
         #     raise ValueError
 
     @defer.inlineCallbacks
-    def top(self):
+    def top(self, count=5):
         if not self.watcher.highestbid:
             defer.returnValue("I have no recent orderbook data. Please try again later.")
             log.debug("Top flair called without current bid/ask set.")
@@ -162,7 +167,7 @@ class Flair(object):
                 else:
                     normalized_users.append((row[0], row[1], row[2]/100))
             top = sorted(normalized_users, key=lambda usr: usr[2], reverse=True)
-            top_strs = ["%s (%s with $%.2f)" % (user[0], user[1], user[2]) for user in top[:5]]
+            top_strs = ["%s (%s with $%.2f)" % (user[0], user[1], user[2]) for user in top[:count]]
             defer.returnValue("Top flair users: " + ', '.join(top_strs))
 
     @defer.inlineCallbacks
@@ -197,7 +202,7 @@ class Flair(object):
             defer.returnValue(ret)
 
         else:
-            defer.returnValue("No flair found for user %s. Join the game with !flair <BEAR|BULL>." % (user))
+            defer.returnValue("No flair found for user %s. Join the game with !flair <bear|bull>." % (user))
 
 
 class FlairService(Flair, service.Service):

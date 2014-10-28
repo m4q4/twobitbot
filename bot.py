@@ -139,7 +139,7 @@ class TwoBitBotFactory(ReconnectingClientFactory):
     def __init__(self, config):
         self.config = config
         self.ratelimiter = ratelimit.ExponentialRateLimiter(
-            max_delay=5*60, base_factor=2, reset_after=30*60)
+            max_delay=self.config['max_command_usage_delay'], base_factor=2, reset_after=30*60)
 
     def buildProtocol(self, addr):
         proto = TwoBitBotIRC(self.config)

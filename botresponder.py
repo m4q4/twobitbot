@@ -10,8 +10,6 @@ from twobitbot import utils, flair
 
 log = logging.getLogger(__name__)
 
-# todo remove 'in' if someone misuses !time as !time in china
-
 
 class BotResponder(object):
     def __init__(self, config, exchange_watcher):
@@ -21,7 +19,8 @@ class BotResponder(object):
             self.name = self.config['botname']
         except KeyError:
             self.name = None
-        self.flair = flair.Flair(self.exchange_watcher, flair_db=self.config['flair_db'])
+        self.flair = flair.Flair(self.exchange_watcher, db=self.config['flair_db'],
+                                 change_delay=self.config['flair_change_delay'])
 
         if self.config['wolfram_alpha_api_key']:
             import wolframalpha
@@ -70,9 +69,11 @@ class BotResponder(object):
 
     @defer.inlineCallbacks
     def cmd_time(self, user, *msg):
-        #results = re.search('!time\s+(.+?)\s*$', msg)
-        #if results is not None:
-        #    location = results.group(1)
+        # small usability change since users sometimes misuse this
+        # command as "!time in X" instead of "!time X"
+        if len(msg) >= 2 and msg[0] == 'in':
+            msg = tuple(msg[1:])
+
         location = ' '.join(msg)
         if len(location) <= 1:
             defer.returnValue(None)
@@ -92,11 +93,10 @@ class BotResponder(object):
         # todo:
         # - fucks up unicode (try "!math price of 1 bitcoin")
         # - messes up multi line output (try "!math licks to get to the center of a tootsie pop")
-        # - unicode encoding error (try "!math size of new york city in square feet")
         # - works on website but not API (try "!math price of gas in portland oregon")
         if not self.wolframalpha:
-            # todo return silently instead?
-            defer.returnValue("Sorry, this command is not available because no Wolfram Alpha API key is set.")
+            log.warn("Could not respond to a !math or !wolfram command because no Wolfram Alpha API key is set")
+            defer.returnValue(None)
         else:
             user_query = ' '.join(msg)
             log.info("Querying Wolfram Alpha with '{}' for '{}'".format(user_query, user))
@@ -129,4 +129,4 @@ class BotResponder(object):
             return self.flair.status(target)
         elif cmd == 'top':
             log.info("Returning top flair user statistics for %s" % (user))
-            return self.flair.top()
+            return self.flair.top(count=self.config['flair_top_list_size'])
