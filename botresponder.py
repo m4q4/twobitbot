@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from twisted.internet import defer, threads
-#from twisted.application import service
 
 import logging
 import datetime
@@ -29,6 +28,8 @@ class BotResponder(object):
             self.wolframalpha = False
             """:type: wolframalpha.Client"""
 
+        self.forex = utils.ForexConverter()
+
     def set_name(self, nickname):
         self.name = nickname
 
@@ -47,13 +48,13 @@ class BotResponder(object):
             # remove the prefix
             args[0] = args[0][len(self.config['command_prefix']):]
 
-            cmd = args[0]
+            cmd = args[0].lower()
             args = args[1:]
 
             try:
                 cmd_method = getattr(self, 'cmd_' + cmd)
             except AttributeError as e:
-                log.warn('Invalid command {0} used by {1} with arguments {2}'.format(cmd, user, args))
+                log.debug('Invalid command {0} used by {1} with arguments {2}'.format(cmd, user, args))
             else:
                 try:
                     return cmd_method(user, *args)
@@ -64,8 +65,8 @@ class BotResponder(object):
         return "Bitcoin donations accepted at %s." % (self.config['btc_donation_addr'])
 
     def cmd_help(self, user=None):
-        return "Commands: {0}time <location>, {0}flair <bear|bull>, {0}flair status [user], {0}flair top".format(
-            self.config['command_prefix'])
+        return ("Commands: {0}time <location>, {0}flair <bear|bull>, {0}flair status [user], {0}flair top, "
+                "{0}forex <conversion>, {0}wolfram <query>").format(self.config['command_prefix'])
 
     @defer.inlineCallbacks
     def cmd_time(self, user, *msg):
@@ -109,6 +110,52 @@ class BotResponder(object):
 
     def cmd_wolfram(self, user, *msg):
         return self.cmd_math(user, *msg)
+
+    def cmd_forex(self, user, *msg):
+        amount = from_currency = to_currency = None
+        if len(msg) == 1:
+            # has to be an invocation like !forex cnyusd
+            if len(msg[0]) != 6:
+                return
+            else:
+                amount = 1
+                from_currency = msg[0][:3]
+                to_currency = msg[0][3:]
+        elif len(msg) == 2:
+            # has to be an invocation like !forex 2345 eurusd
+            if len(msg[1]) != 6:
+                return
+            else:
+                amount = msg[0]
+                from_currency = msg[1][:3]
+                to_currency = msg[1][3:]
+        elif len(msg) == 4 and msg[2].lower == 'to':
+            # has to be an invocation like !forex 123 cny to usd
+            amount = msg[0]
+            from_currency = msg[1]
+            to_currency = msg[3]
+        elif len(msg) == 0:
+            # spit out help message
+            return ("ECB forex rates, updated daily. Usage: "
+                    "{0}forex cnyusd, {0}forex 5000 mxneur, {0}forex 9001 eur to usd.").format(
+                        self.config['command_prefix'])
+        else:
+            # unsupported usage
+            return
+
+        converted = self.forex.convert(amount, from_currency, to_currency)
+        def handle(converted):
+            if converted <= 1e-4 or converted >= 1e20:
+                # These are arbitrary but at least the upper cap is 100% required to avoid situations like
+                # !forex 10e23892348 RUBUSD which DDoS the bot and then the channel once it finally prints it.
+                return None
+            converted_str = "{:.5f}".format(converted).rstrip('0').rstrip('.')
+            return "{} {} is {} {}".format(amount, from_currency.upper(), converted_str, to_currency.upper())
+        def err(error):
+            """:type error: twisted.python.failure.Failure"""
+            # todo spit out an error message instead of silently doing nothing?
+            error.trap(ValueError, TypeError)
+        return converted.addCallbacks(handle, errback=err)
 
     def cmd_flair(self, user, *msg):
         if len(msg) == 0:
