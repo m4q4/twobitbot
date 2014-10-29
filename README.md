@@ -21,6 +21,10 @@ Commands
 * `!flair <bear|bull>`, `!flair status <username (optional)>`, `!flair top`
     * Flair is a paper-trading feature bound to IRC nicknames. This sacrifices some security due to users
     being able to 'steal' nicknames, but makes it a more usable feature than if it required logging in.
+* `!wolfram <query>`
+    * Use Wolfram Alpha to do math and get information
+* `!forex <amount> <pair>`, `!forex <pair>`, `!forex amount <one currency> to <another currency>`
+    * Convert between currencies using up to date forex rates.
 * `!help` for a list of commands
 
 Configuration
@@ -28,8 +32,7 @@ Configuration
 Twobitbot is configured via INI files in the main directory - `bot.ini`, with a fallback to `default.ini`.
 See `default.ini` for an explanation of available configuration options.
 
-NOTE: the active configuration file currently cannot be edited while the application is running,
-because it will be overwritten at shutdown.
+NOTE: currently the bot must be restarted for configuration changes to be applied.
 
 License
 =======
@@ -54,7 +57,7 @@ Files & Modules
 
 Requirements
 =======
-Although there are future plans to change this, currently twobitbot must be installed manually.
+Twobitbot currently can only be installed manually.
 It depends on:
 
 * `python27`
@@ -64,7 +67,7 @@ It depends on:
 * `treq`
 * `pyopenssl`
 
-* `bitcoinapis` at https://github.com/socillion/bitcoinapis
+* `exchangelib` at https://github.com/socillion/exchangelib
     * `autobahn`
     * `twistedpusher` at https://github.com/socillion/twistedpusher
 
@@ -90,6 +93,7 @@ Other Todo
 * clean up callbacks
 * refactor how configuration is used and add some more options
     * rate limiting (flair and bot)
+    * log file (bot.log currently hardcoded)
 * finish converting all code to use Decimals (sqlite3 converter/adapter)
 * possibly change flair to use BTC value instead of USD
 * add telnet/web/similar interface in addition to terminal+irc?
@@ -100,13 +104,52 @@ Other Todo
 * add wall tracking
 * add better live_orders support and Bitstamp HTTP API
 * rethink logging
-* change alert default from 0 aka disabled? Add flair_db and throttle time settings again?
+* Add throttle time setting again?
+* finish switching BitstampWatcher to BitstampAlerter
+* case insensitive commands
+* add !translate command
+    * not sure of feasibility, google translate is only available as a paid service
+* missing: the paavo alias. Server-local patch for this?
+* add alerts to twobitbot that have the different names (like zerogox/others, kraken/mobydick/etc)
 
+* throttle flair changes based on hostname and not nick
+* optional freenode username verification
+* reload config file without restarting
+* add swap/price formerly nickbot commands (also other nickbot stuff???)
+* add small betsChange flairs:
+Future flair changes:
+1. remove separate btc/usd database fields
+2. change buy/sell field to -1/0/1 to add shorting. Nomenclature?
+3. add a tiebreaker for flair ranks to deal with 50 people having the exact same
+4. Fix P/L for fiat, looks like its currently 2x e.g. 600->300 = +100%
+
+* Maybe more easily extensible command system?
+* fix repo line endings - mixed CRLF/LF. Even 1 CR somehow.
+* convert string literals to unicode, experiencing bugs in situations like "{}".format(u"something")
+    where the interpolated string is user input
+    `from __future__ import unicode_literals`
+* decide on whether to put defaults in confspec, initializers, or where. BitstampWatcher threshold, flair defaults, etc
+
+100-250 BTC Tuna alert
+250-500 BTC Dolphin alert
+500-1,000 BTC Manatee alert
+1,000-2,000 BTC Orca alert
+2,000-5,000 BTC Whale alert
+5,000-10,000 BTC Mobidick alert
+10,000-50,000 BTC Leviathan alert
+50,000-100,000 BTC Poseidon alert
+100,000-200,000 BTC Kraken alert
+200,000+ BTC Satoshi alert
 
 Changelog
 =======
 v1.04
-* add config: volume_alert_threshold
+* Added commands:
+    * !math and !wolfram commands via Wolfram Alpha
+    * !forex conversions using ECB rates
+* Updated to current exchangelib version
+* Add config options: volume_alert_threshold, max_command_usage_delay, 
+    flair_change_delay, flair_top_list_size, wolfram_alpha_api_key
 
 v1.03 Apr 7, 2014
 * switch bitstamp api code to twisted using TwistedPusher
