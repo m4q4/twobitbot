@@ -4,8 +4,10 @@ from twisted.internet import defer, threads
 
 import logging
 import datetime
+from decimal import Decimal
 
 from twobitbot import utils, flair
+from exchangelib import bitfinex
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +31,9 @@ class BotResponder(object):
             """:type: wolframalpha.Client"""
 
         self.forex = utils.ForexConverter()
+
+        self.bfx_swap_data = dict()
+        self.bfx_swap_data_time = None
 
     def set_name(self, nickname):
         self.name = nickname
@@ -66,7 +71,7 @@ class BotResponder(object):
 
     def cmd_help(self, user=None):
         return ("Commands: {0}time <location>, {0}flair <bear|bull>, {0}flair status [user], {0}flair top, "
-                "{0}forex <conversion>, {0}wolfram <query>").format(self.config['command_prefix'])
+                "{0}forex <conversion>, {0}wolfram <query>, {0}swaps").format(self.config['command_prefix'])
 
     @defer.inlineCallbacks
     def cmd_time(self, user, *msg):
@@ -143,14 +148,18 @@ class BotResponder(object):
             # unsupported usage
             return
 
+        if from_currency == to_currency:
+            return
+
         converted = self.forex.convert(amount, from_currency, to_currency)
         def handle(converted):
             if converted <= 1e-4 or converted >= 1e20:
                 # These are arbitrary but at least the upper cap is 100% required to avoid situations like
                 # !forex 10e23892348 RUBUSD which DDoS the bot and then the channel once it finally prints it.
                 return None
-            converted_str = "{:.5f}".format(converted).rstrip('0').rstrip('.')
-            return "{} {} is {} {}".format(amount, from_currency.upper(), converted_str, to_currency.upper())
+            amount_str = utils.truncatefloat(Decimal(amount), decimals=5, commas=True)
+            converted_str = utils.truncatefloat(converted, decimals=5, commas=True)
+            return "{} {} is {} {}".format(amount_str, from_currency.upper(), converted_str, to_currency.upper())
         def err(error):
             """:type error: twisted.python.failure.Failure"""
             # todo spit out an error message instead of silently doing nothing?
@@ -177,3 +186,20 @@ class BotResponder(object):
         elif cmd == 'top':
             log.info("Returning top flair user statistics for %s" % (user))
             return self.flair.top(count=self.config['flair_top_list_size'])
+
+    @defer.inlineCallbacks
+    def cmd_swaps(self, user, *msg):
+        if not self.bfx_swap_data_time or utils.now_in_utc_secs() - self.bfx_swap_data_time > 5*30:
+            self.bfx_swap_data = dict()
+            # 2 for loops here so all 3 requests get sent ASAP
+            for currency in ('usd', 'btc', 'ltc'):
+                self.bfx_swap_data[currency] = bitfinex.lends(currency)
+            for c, d in self.bfx_swap_data.iteritems():
+                self.bfx_swap_data[c] = yield d
+            self.bfx_swap_data_time = utils.now_in_utc_secs()
+        swap_data = {}
+        swap_data_strs = list()
+        for currency in self.bfx_swap_data.iterkeys():
+            swap_data[currency] = Decimal(self.bfx_swap_data[currency][0]['amount_lent'])
+            swap_data_strs.append('{} {}'.format(currency.upper(), utils.truncatefloat(swap_data[currency], commas=True)))
+        defer.returnValue("Bitfinex open swaps: {}".format(', '.join(reversed(swap_data_strs))))
