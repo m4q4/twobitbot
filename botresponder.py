@@ -134,7 +134,7 @@ class BotResponder(object):
                 amount = msg[0]
                 from_currency = msg[1][:3]
                 to_currency = msg[1][3:]
-        elif len(msg) == 4 and msg[2].lower == 'to':
+        elif len(msg) == 4 and msg[2].lower() == 'to':
             # has to be an invocation like !forex 123 cny to usd
             amount = msg[0]
             from_currency = msg[1]
