@@ -66,6 +66,7 @@ It depends on:
 * `twisted`
 * `treq`
 * `pyopenssl`
+* `wolframalpha`
 
 * `exchangelib` at https://github.com/socillion/exchangelib
     * `autobahn`
@@ -75,71 +76,9 @@ It depends on:
 Note: `pyopenssl` depends on `cryptography`, which can be annoying to install.
 See instructions here: https://github.com/pyca/cryptography/blob/master/docs/installation.rst
 
-Future features
+Todo
 =======
-* Exchange wall alerts
-* Support for alerts on additional exchanges, including Bitfinex, BTC-e, and Huobi
-* User commands to list exchange prices, volume, etc
-* Mining difficulty command?
-* Competitive elements added to the flair paper-trading, such as a scoreboard. In addition, allow users to see
-current sentiment (ratio of bull vs bear).
-* bitfinex hidden wall detection
-* change flair bear to short instead of fiat?
-* last seen feature
-
-Other Todo
-=======
-* rethink volume alert system
-* clean up callbacks
-* refactor how configuration is used and add some more options
-    * rate limiting (flair and bot)
-    * log file (bot.log currently hardcoded)
-* finish converting all code to use Decimals (sqlite3 converter/adapter)
-* possibly change flair to use BTC value instead of USD
-* add telnet/web/similar interface in addition to terminal+irc?
-* make auxiliary classes into twisted services
-* convert to an application for use with twistd
-* testing
-* packaging
-* add wall tracking
-* add better live_orders support and Bitstamp HTTP API
-* rethink logging
-* Add throttle time setting again?
-* finish switching BitstampWatcher to BitstampAlerter
-* case insensitive commands
-* add !translate command
-    * not sure of feasibility, google translate is only available as a paid service
-* missing: the paavo alias. Server-local patch for this?
-* add alerts to twobitbot that have the different names (like zerogox/others, kraken/mobydick/etc)
-
-* throttle flair changes based on hostname and not nick
-* optional freenode username verification
-* reload config file without restarting
-* add swap/price formerly nickbot commands (also other nickbot stuff???)
-* add small betsChange flairs:
-Future flair changes:
-1. remove separate btc/usd database fields
-2. change buy/sell field to -1/0/1 to add shorting. Nomenclature?
-3. add a tiebreaker for flair ranks to deal with 50 people having the exact same
-4. Fix P/L for fiat, looks like its currently 2x e.g. 600->300 = +100%
-
-* Maybe more easily extensible command system?
-* fix repo line endings - mixed CRLF/LF. Even 1 CR somehow.
-* convert string literals to unicode, experiencing bugs in situations like "{}".format(u"something")
-    where the interpolated string is user input
-    `from __future__ import unicode_literals`
-* decide on whether to put defaults in confspec, initializers, or where. BitstampWatcher threshold, flair defaults, etc
-
-100-250 BTC Tuna alert
-250-500 BTC Dolphin alert
-500-1,000 BTC Manatee alert
-1,000-2,000 BTC Orca alert
-2,000-5,000 BTC Whale alert
-5,000-10,000 BTC Mobidick alert
-10,000-50,000 BTC Leviathan alert
-50,000-100,000 BTC Poseidon alert
-100,000-200,000 BTC Kraken alert
-200,000+ BTC Satoshi alert
+See `TODO.md`
 
 Changelog
 =======
