@@ -183,10 +183,15 @@ class Flair(object):
             price_str = "%.2f" % (last.price/Flair.usdpip)
             pl = 0
             if last.type == 'bear':
-                pl = (last.price / (self.watcher.lowestask * Flair.usdpip) * 100) - 100
+                ask_in_pips = self.watcher.lowestask * Flair.usdpip
+                # these two versions are synonymous. (o-c)/o = o/o-c/o = 1-c/o. Same for longs.
+                # pl = (last.price - ask_in_pips) / last.price * 100
+                pl = (1 - (ask_in_pips / last.price)) * 100
                 balance_str = "$%s" % (last.usd_amt/Flair.usdpip)
             elif last.type == 'bull':
-                pl = (self.watcher.highestbid * Flair.usdpip / last.price * 100) - 100
+                bid_in_pips = self.watcher.highestbid * Flair.usdpip
+                # pl = (bid_in_pips - last.price) / last.price * 100
+                pl = ((bid_in_pips / last.price) - 1) * 100
                 balance_str = "%.4f BTC" % (last.btc_amt / Flair.btcpip)
             if pl > 0:
                 pl_str = "+"
