@@ -178,8 +178,8 @@ class BitstampWatcher(object):
         """Callback, called when new bitstamp orderbook data available"""
         self.orderbook = data
         if 'bids' in data and 'asks' in data and len(data['bids']) > 0 and len(data['asks']) > 0:
-            self._highestbid = data['bids'][0][0]
-            self._lowestask = data['asks'][0][0]
+            self._highestbid = data['bids'][0]['price']
+            self._lowestask = data['asks'][0]['price']
             self.last_orderbook = utils.now_in_utc_secs()
         else:
             log.warn("Bad orderbook data in on_orderbook: %s" % (data))
