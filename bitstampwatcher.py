@@ -7,7 +7,7 @@ import copy
 from collections import deque
 
 from twobitbot import utils
-import exchangelib
+from exchangelib import bitstamp
 
 log = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ log = logging.getLogger(__name__)
 
 
 # temp class for integrating bitstampobserver
-class BitstampAlerter(exchangelib.BitstampObserver):
+class BitstampAlerter(bitstamp.BitstampObserver):
     def __init__(self, triggervolume=100):
         super(BitstampAlerter, self).__init__()
         self.triggervolume = triggervolume
-        self.obs = exchangelib.BitstampObserver()
+        self.obs = bitstamp.BitstampObserver()
         self.alert_callbacks = list()
 
     def add_alerter(self, callback):
@@ -70,7 +70,7 @@ class BitstampWatcher(object):
         self.alert_cbs = list()
 
         # was previously done with BitstampWSAPI and add_trade_listener/add_orderbook_listener
-        self.api = exchangelib.BitstampWebsocketAPI2()
+        self.api = bitstamp.BitstampWebsocketAPI2()
         self.api.listen('trade', self.on_trade)
         self.api.listen('orderbook', self.on_orderbook)
         #self.api.add_liveorder_listener('')
