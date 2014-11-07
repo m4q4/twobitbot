@@ -7,7 +7,7 @@ import datetime
 from decimal import Decimal
 
 from twobitbot import utils, flair
-from exchangelib import bitfinex
+from exchangelib import forex, bitfinex
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,8 @@ class BotResponder(object):
             self.wolframalpha = False
             """:type: wolframalpha.Client"""
 
-        self.forex = utils.ForexConverter()
+        self.forex = forex.ForexConverterService(self.config['open_exchange_rates_app_id'])
+        self.forex.startService()
 
         self.bfx_swap_data = dict()
         self.bfx_swap_data_time = None
@@ -55,7 +56,6 @@ class BotResponder(object):
 
             cmd = args[0].lower()
             args = args[1:]
-
             try:
                 cmd_method = getattr(self, 'cmd_' + cmd)
             except AttributeError as e:
@@ -64,7 +64,8 @@ class BotResponder(object):
                 try:
                     return cmd_method(user, *args)
                 except TypeError as e:
-                    log.warn('Issue dispatching {0} for {1} (cmd={2}, args={3}'.format(cmd_method, user, cmd, args))
+                    log.warn('Issue dispatching {0} for {1} (cmd={2}, args={3}'.format(cmd_method, user, cmd, args),
+                             exc_info=True)
 
     def cmd_donate(self, user=None):
         return "Bitcoin donations accepted at %s." % (self.config['btc_donation_addr'])
@@ -117,23 +118,17 @@ class BotResponder(object):
         return self.cmd_math(user, *msg)
 
     def cmd_forex(self, user, *msg):
-        amount = from_currency = to_currency = None
-        if len(msg) == 1:
+        # todo consider accepting queries like !fx xau where the usd part of xauusd is just implicit
+        if len(msg) == 1 and len(msg[0]) == 6:
             # has to be an invocation like !forex cnyusd
-            if len(msg[0]) != 6:
-                return
-            else:
-                amount = 1
-                from_currency = msg[0][:3]
-                to_currency = msg[0][3:]
-        elif len(msg) == 2:
+            amount = 1
+            from_currency = msg[0][:3]
+            to_currency = msg[0][3:]
+        elif len(msg) == 2 and len(msg[1]) == 6:
             # has to be an invocation like !forex 2345 eurusd
-            if len(msg[1]) != 6:
-                return
-            else:
-                amount = msg[0]
-                from_currency = msg[1][:3]
-                to_currency = msg[1][3:]
+            amount = msg[0]
+            from_currency = msg[1][:3]
+            to_currency = msg[1][3:]
         elif len(msg) == 4 and msg[2].lower() == 'to':
             # has to be an invocation like !forex 123 cny to usd
             amount = msg[0]
@@ -151,8 +146,11 @@ class BotResponder(object):
         if from_currency == to_currency:
             return
 
-        converted = self.forex.convert(amount, from_currency, to_currency)
-        def handle(converted):
+        try:
+            converted = self.forex.convert(amount, from_currency, to_currency)
+        except ValueError as e:
+            log.info('Forex conversion issue: {}'.format(e.message))
+        else:
             if converted <= 1e-4 or converted >= 1e20:
                 # These are arbitrary but at least the upper cap is 100% required to avoid situations like
                 # !forex 10e23892348 RUBUSD which DDoS the bot and then the channel once it finally prints it.
@@ -160,11 +158,9 @@ class BotResponder(object):
             amount_str = utils.truncatefloat(Decimal(amount), decimals=5, commas=True)
             converted_str = utils.truncatefloat(converted, decimals=5, commas=True)
             return "{} {} is {} {}".format(amount_str, from_currency.upper(), converted_str, to_currency.upper())
-        def err(error):
-            """:type error: twisted.python.failure.Failure"""
-            # todo spit out an error message instead of silently doing nothing?
-            error.trap(ValueError, TypeError)
-        return converted.addCallbacks(handle, errback=err)
+
+    def cmd_fx(self, *msg):
+        return self.cmd_forex(*msg)
 
     def cmd_flair(self, user, *msg):
         if len(msg) == 0:
